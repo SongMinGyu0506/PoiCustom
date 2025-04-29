@@ -1,6 +1,6 @@
 # 📄 README.md
 
-```markdown
+
 # Excel Generator - N단계 다단계 엑셀 생성/파싱 라이브러리
 
 Java 기반으로 구현된 **다단계(N단계) 엑셀 생성 및 파싱 유틸리티**입니다.  
