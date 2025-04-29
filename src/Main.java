@@ -1,10 +1,7 @@
-import bumil.custom.excel.node.ExcelHeaderNode;
-import bumil.custom.excel.node.ExcelStyle;
 import bumil.custom.excel.ExcelGenerator;
-import org.apache.poi.ss.usermodel.HorizontalAlignment;
-import org.apache.poi.ss.usermodel.IndexedColors;
-import org.apache.poi.ss.usermodel.VerticalAlignment;
+import bumil.custom.excel.node.ExcelHeaderNode;
 
+import java.io.*;
 import java.util.*;
 
 public class Main {
@@ -29,7 +26,7 @@ public class Main {
     }
 
     public static void main(String[] args) throws Exception {
-        // 1. 헤더 트리 정의 (title=한글, fieldName=영문 DTO 필드명)
+        // 1. 헤더 트리 구성
         ExcelHeaderNode root = new ExcelHeaderNode("사용자 정보", null, Arrays.asList(
                 new ExcelHeaderNode("기본 정보", null, Arrays.asList(
                         new ExcelHeaderNode("이름", "name", null, null),
@@ -41,19 +38,25 @@ public class Main {
                 ), null)
         ), null);
 
-        // 2. 테스트 데이터 생성
+        // 2. 테스트 데이터 준비
         List<UserDTO> users = Arrays.asList(
                 createUser("홍길동", 30, "서울", "강남구"),
                 createUser("김철수", 25, "부산", "해운대구")
         );
 
         // 3. 엑셀 파일 생성
-        Map<String, ExcelStyle> bodyStyleMap = new HashMap<>();
-        ExcelGenerator.generateExcel("test.xlsx", root, users, bodyStyleMap);
-        System.out.println("엑셀 생성 완료");
+        try (OutputStream fos = new FileOutputStream("test.xlsx")) {
+            ExcelGenerator.generateExcel(fos, root, users, new HashMap<>());
+        }
+        System.out.println("엑셀 파일 생성 완료");
 
-        // 4. 엑셀 파일 읽기 (한글 제목 → fieldName 매핑 사용)
-        List<UserDTO> importedUsers = ExcelGenerator.parseExcelToDto("test.xlsx", UserDTO.class, 2, root);
+        // 4. 엑셀 파일 읽어서 DTO 변환 (headerRoot 넘겨줌)
+        List<UserDTO> importedUsers;
+        try (InputStream fis = new FileInputStream("test.xlsx")) {
+            importedUsers = ExcelGenerator.parseExcelToDto(fis, UserDTO.class, 2, root);
+        }
+
+        // 5. 출력
         for (UserDTO user : importedUsers) {
             System.out.println(user.getName() + ", " + user.getAge() + ", " + user.getCity() + ", " + user.getDistrict());
         }

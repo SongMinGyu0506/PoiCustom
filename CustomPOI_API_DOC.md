@@ -39,15 +39,17 @@
 #### generateExcel
 
 ```java
+import java.io.OutputStream;
+
 public static void generateExcel(
-    String filename,
-    ExcelHeaderNode headerRoot,
-    List<?> dataList,
-    Map<String, ExcelStyle> bodyStyleMap
+        OutputStream out,
+        ExcelHeaderNode headerRoot,
+        List<?> dataList,
+        Map<String, ExcelStyle> bodyStyleMap
 ) throws Exception
 ```
 
-- `filename` : 저장할 엑셀 파일명 (예: `"sample.xlsx"`)
+- `out` : 저장할 엑셀 파일 바이너리
 - `headerRoot` : 헤더 트리 최상위 노드
 - `dataList` : 바디 영역에 매핑할 DTO 리스트
 - `bodyStyleMap` : 컬럼명 기준 바디 셀 스타일 매핑 (선택)
@@ -55,14 +57,16 @@ public static void generateExcel(
 #### parseExcelToDto
 
 ```java
+import java.io.InputStream;
+
 public static <T> List<T> parseExcelToDto(
-    String filename,
-    Class<T> dtoClass,
-    int headerEndRow
+        InputStream in,
+        Class<T> dtoClass,
+        int headerEndRow
 ) throws Exception
 ```
 
-- `filename` : 읽을 엑셀 파일명
+- `in` : 읽을 엑셀 파일 바이너리
 - `dtoClass` : 매핑할 DTO 클래스
 - `headerEndRow` : 헤더가 끝나는 라인 번호 (0부터 시작)
 

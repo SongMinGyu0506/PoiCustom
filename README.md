@@ -81,7 +81,10 @@ List<UserDTO> users = Arrays.asList(
     new UserDTO("김철수", 25, "부산", "해운대구")
 );
 
-ExcelGenerator.generateExcel("test.xlsx", root, users, new HashMap<>());
+try (OutputStream out = new FileOutputStream("test.xlsx")) {
+        ExcelGenerator.generateExcel(out, headerRoot, dataList, bodyStyleMap);
+}
+
 ```
 ### 결과
 ![image](https://github.com/user-attachments/assets/f4b9091d-b481-47e4-af0b-968b8c2fba2c)
@@ -90,7 +93,9 @@ ExcelGenerator.generateExcel("test.xlsx", root, users, new HashMap<>());
 ### 엑셀 파일 파싱
 
 ```java
-List<UserDTO> imported = ExcelGenerator.parseExcelToDto("test.xlsx", UserDTO.class, 2);
+try (InputStream in = new FileInputStream("test.xlsx")) {
+List<UserDTO> list = ExcelGenerator.parseExcelToDto(in, UserDTO.class, headerEndRow, headerRoot);
+}
 ```
 
 ---

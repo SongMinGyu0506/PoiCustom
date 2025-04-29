@@ -9,6 +9,7 @@ import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.*;
@@ -171,13 +172,13 @@ public class ExcelGenerator {
     /**
      * DTO 리스트를 기반으로 엑셀 파일을 생성합니다.
      *
-     * @param filename 생성할 파일명
+     * @param out 생성할 파일명
      * @param headerRoot 헤더 트리 루트
      * @param dataList 데이터 객체 리스트
      * @param bodyStyleMap 필드명별 스타일 매핑
      * @throws Exception 파일 생성 실패 시
      */
-    public static void generateExcel(String filename, ExcelHeaderNode headerRoot, List<?> dataList, Map<String, ExcelStyle> bodyStyleMap) throws Exception {
+    public static void generateExcel(OutputStream out, ExcelHeaderNode headerRoot, List<?> dataList, Map<String, ExcelStyle> bodyStyleMap) throws Exception {
         Workbook workbook = new XSSFWorkbook();
         Sheet sheet = workbook.createSheet("Sheet1");
         Map<Integer, Row> rowMap = new HashMap<>();
@@ -211,9 +212,7 @@ public class ExcelGenerator {
         }
 
         // 4. 파일 저장
-        try (FileOutputStream fos = new FileOutputStream(filename)) {
-            workbook.write(fos);
-        }
+        workbook.write(out);
         workbook.close();
     }
 
@@ -233,53 +232,56 @@ public class ExcelGenerator {
     /**
      * 엑셀 파일을 파싱하여 DTO 리스트로 변환합니다.
      *
-     * @param filename 엑셀 파일명
+     * @param in 엑셀 파일명
      * @param dtoClass 변환할 DTO 클래스
      * @param headerEndRow 헤더 마지막 행 번호
      * @return 변환된 DTO 리스트
      * @throws Exception 파일 읽기 또는 매핑 실패 시
      */
-    public static <T> List<T> parseExcelToDto(String filename, Class<T> dtoClass, int headerEndRow, ExcelHeaderNode headerRoot) throws Exception {
+    public static <T> List<T> parseExcelToDto(InputStream in, Class<T> dtoClass, int headerEndRow, ExcelHeaderNode headerRoot) throws Exception {
         List<T> result = new ArrayList<>();
+        Workbook workbook = new XSSFWorkbook(in);
+        Sheet sheet = workbook.getSheetAt(0);
+
+        // 1. title -> fieldName 매핑 테이블 만들기
         Map<String, String> titleToFieldNameMap = buildTitleToFieldNameMap(headerRoot);
 
-        try (InputStream inputStream = new FileInputStream(filename)) {
-            Workbook workbook = new XSSFWorkbook(inputStream);
-            Sheet sheet = workbook.getSheetAt(0);
-
-            Row headerRow = sheet.getRow(headerEndRow);
-            List<String> headers = new ArrayList<>();
-            for (Cell cell : headerRow) {
-                headers.add(cell.getStringCellValue().trim());
+        Row headerRow = sheet.getRow(headerEndRow);
+        List<String> fieldNames = new ArrayList<>();
+        for (Cell cell : headerRow) {
+            String title = cell.getStringCellValue().trim();
+            String fieldName = titleToFieldNameMap.get(title); // 제목으로 fieldName 찾기
+            if (fieldName != null) {
+                fieldNames.add(fieldName);
+            } else {
+                fieldNames.add(title); // 매핑 못 찾으면 그냥 title 넣기 (fallback)
             }
-
-            for (int i = headerEndRow + 1; i <= sheet.getLastRowNum(); i++) {
-                Row row = sheet.getRow(i);
-                if (row == null || isEmptyRow(row)) continue;
-
-                T dto = dtoClass.getDeclaredConstructor().newInstance();
-                for (int j = 0; j < headers.size(); j++) {
-                    Cell cell = row.getCell(j);
-                    if (cell == null) continue;
-
-                    String fieldName = titleToFieldNameMap.get(headers.get(j)); // 한글 제목을 필드명으로 변환
-                    if (fieldName == null) continue;
-
-                    Object value = null;
-                    switch (cell.getCellType()) {
-                        case STRING: value = cell.getStringCellValue(); break;
-                        case NUMERIC: value = cell.getNumericCellValue(); break;
-                        case BOOLEAN: value = cell.getBooleanCellValue(); break;
-                        default: break;
-                    }
-                    setFieldValue(dto, fieldName, value);
-                }
-                result.add(dto);
-            }
-            workbook.close();
         }
+
+        for (int i = headerEndRow + 1; i <= sheet.getLastRowNum(); i++) {
+            Row row = sheet.getRow(i);
+            if (row == null || isEmptyRow(row)) continue;
+
+            T dto = dtoClass.getDeclaredConstructor().newInstance();
+            for (int j = 0; j < fieldNames.size(); j++) {
+                Cell cell = row.getCell(j);
+                if (cell == null) continue;
+
+                Object value = null;
+                switch (cell.getCellType()) {
+                    case STRING: value = cell.getStringCellValue(); break;
+                    case NUMERIC: value = cell.getNumericCellValue(); break;
+                    case BOOLEAN: value = cell.getBooleanCellValue(); break;
+                    default: break;
+                }
+                setFieldValue(dto, fieldNames.get(j), value);
+            }
+            result.add(dto);
+        }
+        workbook.close();
         return result;
     }
+
     /**
      * 주어진 행이 비어 있는지 여부를 검사합니다.
      *
