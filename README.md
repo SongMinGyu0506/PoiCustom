@@ -29,7 +29,7 @@ Apache POI를 기반으로 하며, 복잡한 헤더 구조와 셀 병합, 스타
 ## 🚀 설치 및 빌드
 
 ```bash
-git clone [https://github.com/your-repo/excel-generator.git](https://github.com/SongMinGyu0506/PoiCustom.git)
+git clone https://github.com/SongMinGyu0506/PoiCustom.git
 cd excel-generator
 ```
 
