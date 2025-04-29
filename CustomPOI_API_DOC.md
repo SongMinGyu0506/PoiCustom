@@ -1,88 +1,106 @@
-# Excel Generator API 문서
+# 📑 최종 정리: `CustomPOI_API_DOC.md` (Notion 스타일, 전체 Public 메소드 문서화)
 
-## 📦 패키지 구조
-
-| 패키지 | 설명 |
-|:--|:--|
-| `ExcelGenerator` | 엑셀 파일 생성 및 파싱 기능 제공 |
-| `ExcelHeaderNode` | 엑셀 헤더 구조 정의 (트리 형태 지원) |
-| `ExcelStyle` | 셀 스타일 지정용 모델 클래스 |
+## 1. 개요
+- CustomPOI는 다양한 형태의 엑셀 파일을 생성하고 읽을 수 있는 유틸리티입니다.
+- 다단계 헤더, 병합 셀, DTO 매핑 기반 엑셀 자동화 지원
+- 자동 열 너비 조정 기능 포함 (autoSizeColumn)
 
 ---
 
-## 📚 주요 클래스 및 메소드
+## 2. ExcelGenerator 클래스
 
-### ExcelHeaderNode
+### 2.1. 메소드: generateExcel
 
-트리 형태로 다단계(N단계) 엑셀 헤더를 구성하는 클래스입니다.
-
-- `title` : 엑셀에 표시할 컬럼 이름 (예: `"이름"`, `"나이"`)
-- `fieldName` : DTO 매핑용 필드명 (예: `"name"`, `"age"`)
-- `children` : 하위 헤더 노드 리스트
-- `style` : 셀 스타일 정보
-
-### ExcelStyle
-
-엑셀 셀에 적용할 스타일을 정의하는 클래스입니다.
-
-- `fontName` : 폰트명
-- `fontSize` : 폰트 크기
-- `bold` : 볼드체 여부
-- `backgroundColor` : 배경 색상
-- `alignment` : 가로 정렬
-- `verticalAlignment` : 세로 정렬
-
-### ExcelGenerator
-
-엑셀 생성 및 읽기를 담당하는 유틸리티 클래스입니다.
-
-#### generateExcel
-
+#### 2.1.1. 시그니처
 ```java
-import java.io.OutputStream;
-
-public static void generateExcel(
-        OutputStream out,
-        ExcelHeaderNode headerRoot,
-        List<?> dataList,
-        Map<String, ExcelStyle> bodyStyleMap
-) throws Exception
+public static void generateExcel(OutputStream out, ExcelHeaderNode headerRoot, List<?> dataList, Map<String, ExcelStyle> bodyStyleMap) throws Exception
 ```
 
-- `out` : 저장할 엑셀 파일 바이너리
-- `headerRoot` : 헤더 트리 최상위 노드
-- `dataList` : 바디 영역에 매핑할 DTO 리스트
-- `bodyStyleMap` : 컬럼명 기준 바디 셀 스타일 매핑 (선택)
+#### 2.1.2. 기능 설명
+- 주어진 `headerRoot`를 기반으로 엑셀 헤더를 작성합니다.
+- `dataList`를 기반으로 바디(데이터) 영역을 채웁니다.
+- `bodyStyleMap`을 통해 각 필드별 스타일을 적용할 수 있습니다.
+- 작성 완료 후 **컬럼 너비를 자동으로 조정(autoSizeColumn)** 합니다. ✅
 
-#### parseExcelToDto
+---
 
+#### 2.1.3. 파라미터
+
+| 파라미터명 | 타입 | 설명 |
+|:---|:---|:---|
+| out | OutputStream | 엑셀 파일을 출력할 스트림 |
+| headerRoot | ExcelHeaderNode | 엑셀 헤더를 정의하는 트리 최상위 노드 |
+| dataList | List<?> | 엑셀에 작성할 DTO 객체 리스트 |
+| bodyStyleMap | Map<String, ExcelStyle> | 필드별 바디 셀 스타일 설정 맵 |
+
+---
+
+#### 2.1.4. 특징
+- 다단계 헤더 작성 가능
+- 병합 셀(Merged Cell) 지원
+- DTO 필드명과 매칭하여 데이터 자동 작성
+- **엑셀 저장 직전에 열 너비 자동 최적화** 적용
+
+---
+
+#### 2.1.5. 주의사항
+- `ExcelHeaderNode` 트리의 **leaf 노드 순서**가 컬럼 순서를 결정합니다.
+- DTO 클래스의 필드명과 `ExcelHeaderNode`의 `fieldName`이 정확히 매칭되어야 합니다.
+- 추가적인 열 너비 조정 코드가 필요 없습니다. (내부 autoSize 적용)
+
+---
+
+### 2.2. 메소드: parseExcelToDto
+
+#### 2.2.1. 시그니처
 ```java
-import java.io.InputStream;
-
-public static <T> List<T> parseExcelToDto(
-        InputStream in,
-        Class<T> dtoClass,
-        int headerEndRow
-) throws Exception
+public static <T> List<T> parseExcelToDto(InputStream in, Class<T> dtoClass, int headerEndRow, ExcelHeaderNode headerRoot) throws Exception
 ```
 
-- `in` : 읽을 엑셀 파일 바이너리
-- `dtoClass` : 매핑할 DTO 클래스
-- `headerEndRow` : 헤더가 끝나는 라인 번호 (0부터 시작)
+#### 2.2.2. 기능 설명
+- 엑셀 파일을 읽어 `dtoClass` 타입의 리스트로 변환합니다.
+- `headerEndRow` 이후부터 데이터 영역으로 인식하여 데이터를 읽습니다.
+- `headerRoot`를 기반으로 **컬럼 순서**와 **DTO 필드 매핑**을 수행합니다.
 
 ---
 
-## 🧩 사용 흐름
+#### 2.2.3. 파라미터
 
-1. `ExcelHeaderNode`로 헤더 트리 정의
-2. DTO 리스트 준비
-3. `generateExcel()`로 엑셀 생성
-4. `parseExcelToDto()`로 엑셀 파일 읽어 DTO 리스트 변환
+| 파라미터명 | 타입 | 설명 |
+|:---|:---|:---|
+| in | InputStream | 읽어올 엑셀 파일 입력 스트림 |
+| dtoClass | Class<T> | 변환할 DTO 클래스 타입 |
+| headerEndRow | int | 헤더가 끝나는 행(row) 인덱스 (0부터 시작) |
+| headerRoot | ExcelHeaderNode | 헤더 구조를 정의하는 트리 최상위 노드 |
 
 ---
 
-## 💬 주의사항
+#### 2.2.4. 특징
+- **Row 단위**로 엑셀 데이터를 읽어 DTO로 변환
+- 병합 셀(Merged Cell) 영역에서도 정상적으로 값을 읽어옴
+- 데이터 셀 비어있을 경우, 병합된 상단 셀에서 값 가져옴
+- DTO 필드 타입(Integer, Double, String 등)에 맞춰 자동 변환 지원
+- 변환 실패 시 `null` 처리 (예외 발생 없이 무시)
 
-- 엑셀에 표시되는 `title`은 자유롭게 작성 가능(한글 가능)
-- 내부 매핑용 `fieldName`은 DTO 필드명과 정확히 일치해야 함
-- POI 및 관련 라이브러리 의존성 필요
+---
+
+#### 2.2.5. 주의사항
+- DTO 필드명과 `ExcelHeaderNode`의 fieldName이 정확히 매칭되어야 함
+- 데이터 Row의 컬럼 순서가 헤더 leaf 노드 순서와 맞아야 함
+- 변환할 수 없는 값이 존재할 경우 해당 필드는 `null`로 채워질 수 있음
+
+---
+
+## 3. 추가 예정 기능
+
+- 특정 컬럼만 선택적으로 autoSize 적용
+- 고정 열 너비 설정
+- 헤더 다국어 지원 (i18n)
+- 다양한 셀 스타일 템플릿 지원
+
+---
+
+# ✅ 요약
+- `generateExcel`과 `parseExcelToDto` 두 개 모두 문서화 완료
+- 시그니처, 설명, 파라미터, 특징, 주의사항 모두 빠짐없이 정리
+- 형식은 Notion 스타일 (계층적 마크다운)
