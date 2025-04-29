@@ -83,6 +83,9 @@ List<UserDTO> users = Arrays.asList(
 
 ExcelGenerator.generateExcel("test.xlsx", root, users, new HashMap<>());
 ```
+### 결과
+![image](https://github.com/user-attachments/assets/f4b9091d-b481-47e4-af0b-968b8c2fba2c)
+
 
 ### 엑셀 파일 파싱
 
